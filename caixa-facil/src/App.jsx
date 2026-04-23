@@ -29,6 +29,146 @@ const sumList = (list) => (list || [""]).reduce((s, v) => s + parse(v), 0);
 const initValores = (formas) => Object.fromEntries(formas.map((pt) => [pt.key, [""]]));
 
 /* ══════════════════════════════════════
+   CALCULADORA DE CÉDULAS E MOEDAS
+══════════════════════════════════════ */
+const CEDULAS = [
+  { valor: 200, label: "R$ 200", cor: "#F97316", emoji: "🟠" },
+  { valor: 100, label: "R$ 100", cor: "#3B82F6", emoji: "🔵" },
+  { valor: 50,  label: "R$ 50",  cor: "#10B981", emoji: "🟢" },
+  { valor: 20,  label: "R$ 20",  cor: "#F59E0B", emoji: "🟡" },
+  { valor: 10,  label: "R$ 10",  cor: "#8B5CF6", emoji: "🟣" },
+  { valor: 5,   label: "R$ 5",   cor: "#06B6D4", emoji: "🔷" },
+  { valor: 2,   label: "R$ 2",   cor: "#EF4444", emoji: "🔴" },
+  { valor: 1,   label: "R$ 1",   cor: "#94A3B8", emoji: "⚪" },
+  { valor: 0.50, label: "R$ 0,50", cor: "#A3E635", emoji: "🟩" },
+  { valor: 0.25, label: "R$ 0,25", cor: "#FB923C", emoji: "🟧" },
+  { valor: 0.10, label: "R$ 0,10", cor: "#E879F9", emoji: "🌸" },
+  { valor: 0.05, label: "R$ 0,05", cor: "#67E8F9", emoji: "🔹" },
+];
+
+function CalculadoraTab() {
+  const [qtd, setQtd] = useState({});
+
+  const total = CEDULAS.reduce((s, c) => s + (parse(qtd[c.valor] || 0) * c.valor), 0);
+  const totalNotas = CEDULAS.filter((c) => c.valor >= 1).reduce((s, c) => s + parse(qtd[c.valor] || 0), 0);
+  const totalMoedas = CEDULAS.filter((c) => c.valor < 1).reduce((s, c) => s + parse(qtd[c.valor] || 0), 0);
+
+  const limpar = () => setQtd({});
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ ...cardTitle, marginBottom: 0 }}>💵 Calculadora de Cédulas e Moedas</h2>
+          <button style={{ ...btn, background: "#374151", fontSize: 12, padding: "7px 14px" }} onClick={limpar}>🔄 Limpar</button>
+        </div>
+
+        {/* Cédulas */}
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+          💵 Cédulas
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+          {CEDULAS.filter((c) => c.valor >= 1).map((c) => {
+            const q = parse(qtd[c.valor] || 0);
+            const subtotal = q * c.valor;
+            return (
+              <div key={c.valor} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr", gap: 10, alignItems: "center", background: "#1E293B", borderRadius: 10, padding: "10px 14px", border: `1px solid ${q > 0 ? c.cor + "66" : "#334155"}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>{c.emoji}</span>
+                  <span style={{ fontWeight: 800, color: c.cor, fontSize: 15 }}>{c.label}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: "#334155", color: "#F1F5F9", fontSize: 18, cursor: "pointer", fontWeight: 700 }}
+                    onClick={() => setQtd((prev) => ({ ...prev, [c.valor]: Math.max(0, (parse(prev[c.valor] || 0) - 1)) }))}>−</button>
+                  <input
+                    style={{ ...inputStyle, textAlign: "center", width: 70, padding: "7px 8px", fontSize: 16, fontWeight: 700 }}
+                    type="number" min="0" step="1"
+                    value={qtd[c.valor] || ""}
+                    placeholder="0"
+                    onChange={(e) => setQtd((prev) => ({ ...prev, [c.valor]: e.target.value }))}
+                  />
+                  <button style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: c.cor, color: "#fff", fontSize: 18, cursor: "pointer", fontWeight: 700 }}
+                    onClick={() => setQtd((prev) => ({ ...prev, [c.valor]: (parse(prev[c.valor] || 0) + 1) }))}>+</button>
+                </div>
+                <div style={{ textAlign: "right", fontWeight: 800, color: q > 0 ? c.cor : "#334155", fontSize: 15 }}>
+                  {q > 0 ? fmt(subtotal) : "—"}
+                  {q > 0 && <div style={{ fontSize: 10, color: "#64748B", fontWeight: 400 }}>{q} × {c.label}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Moedas */}
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+          🪙 Moedas
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+          {CEDULAS.filter((c) => c.valor < 1).map((c) => {
+            const q = parse(qtd[c.valor] || 0);
+            const subtotal = q * c.valor;
+            return (
+              <div key={c.valor} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr", gap: 10, alignItems: "center", background: "#1E293B", borderRadius: 10, padding: "10px 14px", border: `1px solid ${q > 0 ? c.cor + "66" : "#334155"}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>{c.emoji}</span>
+                  <span style={{ fontWeight: 800, color: c.cor, fontSize: 15 }}>{c.label}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: "#334155", color: "#F1F5F9", fontSize: 18, cursor: "pointer", fontWeight: 700 }}
+                    onClick={() => setQtd((prev) => ({ ...prev, [c.valor]: Math.max(0, (parse(prev[c.valor] || 0) - 1)) }))}>−</button>
+                  <input
+                    style={{ ...inputStyle, textAlign: "center", width: 70, padding: "7px 8px", fontSize: 16, fontWeight: 700 }}
+                    type="number" min="0" step="1"
+                    value={qtd[c.valor] || ""}
+                    placeholder="0"
+                    onChange={(e) => setQtd((prev) => ({ ...prev, [c.valor]: e.target.value }))}
+                  />
+                  <button style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: c.cor, color: "#fff", fontSize: 18, cursor: "pointer", fontWeight: 700 }}
+                    onClick={() => setQtd((prev) => ({ ...prev, [c.valor]: (parse(prev[c.valor] || 0) + 1) }))}>+</button>
+                </div>
+                <div style={{ textAlign: "right", fontWeight: 800, color: q > 0 ? c.cor : "#334155", fontSize: 15 }}>
+                  {q > 0 ? fmt(subtotal) : "—"}
+                  {q > 0 && <div style={{ fontSize: 10, color: "#64748B", fontWeight: 400 }}>{q} × {c.label}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Total geral */}
+        <div style={{ background: "linear-gradient(135deg,#052e1630,#10B98125)", border: "2px solid #10B98166", borderRadius: 14, padding: "20px 24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>💵 Total em Notas</div>
+              <div style={{ fontWeight: 800, color: "#3B82F6", fontSize: 16 }}>
+                {fmt(CEDULAS.filter((c) => c.valor >= 1).reduce((s, c) => s + (parse(qtd[c.valor] || 0) * c.valor), 0))}
+              </div>
+              <div style={{ fontSize: 10, color: "#475569" }}>{totalNotas} cédulas</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>🪙 Total em Moedas</div>
+              <div style={{ fontWeight: 800, color: "#F59E0B", fontSize: 16 }}>
+                {fmt(CEDULAS.filter((c) => c.valor < 1).reduce((s, c) => s + (parse(qtd[c.valor] || 0) * c.valor), 0))}
+              </div>
+              <div style={{ fontSize: 10, color: "#475569" }}>{totalMoedas} moedas</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#64748B", marginBottom: 4 }}>📦 Total de Peças</div>
+              <div style={{ fontWeight: 800, color: "#10B981", fontSize: 16 }}>{totalNotas + totalMoedas}</div>
+              <div style={{ fontSize: 10, color: "#475569" }}>cédulas + moedas</div>
+            </div>
+          </div>
+          <div style={{ textAlign: "center", borderTop: "1px solid #10B98133", paddingTop: 14 }}>
+            <div style={{ fontSize: 12, color: "#94A3B8", marginBottom: 4 }}>💰 TOTAL GERAL</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: "#10B981" }}>{fmt(total)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
    ABA CONFIGURAÇÕES
 ══════════════════════════════════════ */
 function ConfigTab({ formas, setFormas }) {
@@ -200,13 +340,18 @@ function MultiValueField({ pt, values, onChange }) {
 /* ══════════════════════════════════════
    ABA 1 — ENTRADA
 ══════════════════════════════════════ */
-function EntradaTab({ vendedores, setVendedores, formas }) {
+function EntradaTab({ vendedores, setVendedores, formas, cadastros }) {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [valores, setValores] = useState(initValores(formas));
   const [editId, setEditId] = useState(null);
 
   const totalEntrada = formas.reduce((s, pt) => s + sumList(valores[pt.key]), 0);
+
+  const selecionarCadastro = (id) => {
+    const c = cadastros.find((x) => x.id === Number(id));
+    if (c) { setNome(c.nome); setTelefone(c.telefone || ""); }
+  };
 
   const salvar = () => {
     if (!nome.trim()) return alert("Digite o nome do vendedor.");
@@ -261,6 +406,17 @@ function EntradaTab({ vendedores, setVendedores, formas }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={card}>
         <h2 style={cardTitle}>{editId ? "✏️ Editando Vendedor" : "➕ Nova Entrada"}</h2>
+        {cadastros.length > 0 && !editId && (
+          <div style={{ marginBottom: 14, background: "#0D1527", border: "1px solid #10B98133", borderRadius: 10, padding: "10px 14px" }}>
+            <label style={{ ...labelStyle, color: "#10B981" }}>⚡ Selecionar vendedor cadastrado</label>
+            <select style={inputStyle} defaultValue="" onChange={(e) => selecionarCadastro(e.target.value)}>
+              <option value="">-- Escolha para preencher automaticamente --</option>
+              {cadastros.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}{c.telefone ? ` · ${c.telefone}` : ""}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
           <div>
             <label style={labelStyle}>Nome do Vendedor</label>
@@ -364,7 +520,7 @@ function EntradaTab({ vendedores, setVendedores, formas }) {
 /* ══════════════════════════════════════
    ABA 2 — PRESTAÇÃO DE CONTAS
 ══════════════════════════════════════ */
-function PrestaContasTab({ vendedores, setVendedores, formas }) {
+function PrestaContasTab({ vendedores, setVendedores, formas, atualizarSaldoCadastro }) {
   const [selectedId, setSelectedId] = useState("");
   const [entregue, setEntregue] = useState(initValores(formas));
   const [confirmado, setConfirmado] = useState(false);
@@ -399,6 +555,10 @@ function PrestaContasTab({ vendedores, setVendedores, formas }) {
     setVendedores((prev) =>
       prev.map((v) => v.id === Number(selectedId) ? { ...v, prestacao: resultado } : v)
     );
+    // Atualiza saldo do vendedor no cadastro
+    if (atualizarSaldoCadastro && vendedor) {
+      atualizarSaldoCadastro(vendedor.nome, difTotal);
+    }
     setConfirmado(true);
   };
 
@@ -447,8 +607,8 @@ function PrestaContasTab({ vendedores, setVendedores, formas }) {
         {/* Banner de prestação já confirmada */}
         {vendedor && confirmado && (
           <div style={{ background: "#0D1F0D", border: "1px solid #10B98155", borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: "#10B981", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>✅ Prestação de contas confirmada e salva no resumo.</span>
-            <button style={{ ...btn, background: "#374151", fontSize: 11, padding: "5px 12px" }} onClick={limpar}>Refazer</button>
+            <span>✅ Prestação confirmada. Para corrigir um valor, clique em Editar.</span>
+            <button style={{ ...btn, background: "#2563EB", fontSize: 11, padding: "5px 12px" }} onClick={() => setConfirmado(false)}>✏️ Editar</button>
           </div>
         )}
 
@@ -546,7 +706,7 @@ function PrestaContasTab({ vendedores, setVendedores, formas }) {
                   </div>
                   {confirmado && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <button style={{ ...btn, background: "#374151", fontSize: 11, padding: "5px 12px" }} onClick={limpar}>🔄 Refazer</button>
+                      <button style={{ ...btn, background: "#2563EB", fontSize: 11, padding: "5px 12px" }} onClick={() => setConfirmado(false)}>✏️ Editar</button>
                       {vendedor?.telefone && (
                         <button
                           style={{ ...btn, background: "#25D366", fontSize: 11, padding: "5px 12px" }}
@@ -1242,6 +1402,144 @@ function EditarFechamento({ fechamento, formas, onSalvar, onCancelar }) {
 }
 
 /* ══════════════════════════════════════
+   ABA CADASTRO DE VENDEDORES
+══════════════════════════════════════ */
+function CadastroVendedoresTab({ cadastros, setCadastros }) {
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [saldoInicial, setSaldoInicial] = useState("");
+  const [editId, setEditId] = useState(null);
+  const [editandoSaldo, setEditandoSaldo] = useState(null);
+  const [novoSaldo, setNovoSaldo] = useState("");
+
+  const salvar = () => {
+    if (!nome.trim()) return alert("Digite o nome do vendedor.");
+    const cadastro = {
+      id: editId || Date.now(),
+      nome: nome.trim(),
+      telefone: telefone.replace(/\D/g, ""),
+      saldo: editId ? (cadastros.find(c => c.id === editId)?.saldo || 0) : parse(saldoInicial),
+      dataCadastro: editId ? (cadastros.find(c => c.id === editId)?.dataCadastro || new Date().toLocaleDateString("pt-BR")) : new Date().toLocaleDateString("pt-BR"),
+    };
+    if (editId) {
+      setCadastros((prev) => prev.map((c) => c.id === editId ? cadastro : c));
+      setEditId(null);
+    } else {
+      setCadastros((prev) => [...prev, cadastro]);
+    }
+    setNome(""); setTelefone(""); setSaldoInicial("");
+  };
+
+  const editar = (c) => { setEditId(c.id); setNome(c.nome); setTelefone(c.telefone || ""); };
+  const remover = (id) => { if (confirm("Remover este vendedor do cadastro?")) setCadastros((prev) => prev.filter((c) => c.id !== id)); };
+
+  const salvarSaldo = (id) => {
+    setCadastros((prev) => prev.map((c) => c.id === id ? { ...c, saldo: parse(novoSaldo) } : c));
+    setEditandoSaldo(null);
+    setNovoSaldo("");
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Formulário */}
+      <div style={card}>
+        <h2 style={cardTitle}>{editId ? "✏️ Editando Cadastro" : "➕ Cadastrar Vendedor"}</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>👤 Nome</label>
+            <input style={inputStyle} placeholder="Ex: João Silva" value={nome} onChange={(e) => setNome(e.target.value)} />
+          </div>
+          <div>
+            <label style={labelStyle}>📱 WhatsApp (com DDD)</label>
+            <input style={inputStyle} placeholder="Ex: 87999998888" value={telefone} onChange={(e) => setTelefone(e.target.value)} type="tel" maxLength={15} />
+          </div>
+          {!editId && (
+            <div>
+              <label style={labelStyle}>⚖️ Saldo Inicial (opcional)</label>
+              <input style={inputStyle} placeholder="Ex: -50,00 ou 0" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} type="number" step="0.01" />
+              <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>Use negativo para dívidas já existentes</div>
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {editId && <button style={{ ...btn, background: "#374151" }} onClick={() => { setEditId(null); setNome(""); setTelefone(""); }}>Cancelar</button>}
+          <button style={{ ...btn, background: "#10B981" }} onClick={salvar}>{editId ? "Atualizar" : "💾 Salvar Cadastro"}</button>
+        </div>
+      </div>
+
+      {/* Lista de cadastros */}
+      {cadastros.length > 0 && (
+        <div style={card}>
+          <h2 style={cardTitle}>👥 Vendedores Cadastrados ({cadastros.length})</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {cadastros.map((c) => {
+              const saldoPos = c.saldo > 0.01;
+              const saldoNeg = c.saldo < -0.01;
+              const saldoOk = Math.abs(c.saldo) < 0.01;
+              const saldoCor = saldoOk ? "#10B981" : saldoPos ? "#3B82F6" : "#EF4444";
+              return (
+                <div key={c.id} style={{ background: "#1E293B", border: `1px solid ${saldoCor}33`, borderRadius: 12, padding: "14px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: "#F1F5F9", fontSize: 15 }}>👤 {c.nome}</div>
+                      {c.telefone && <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>📱 {c.telefone}</div>}
+                      <div style={{ fontSize: 10, color: "#475569", marginTop: 1 }}>Cadastrado em {c.dataCadastro}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {/* Saldo */}
+                      <div style={{ background: saldoCor + "22", border: `1px solid ${saldoCor}55`, borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 2 }}>⚖️ SALDO</div>
+                        {editandoSaldo === c.id ? (
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            <input
+                              style={{ ...inputStyle, width: 100, padding: "4px 8px", fontSize: 13, textAlign: "right" }}
+                              type="number" step="0.01"
+                              value={novoSaldo}
+                              onChange={(e) => setNovoSaldo(e.target.value)}
+                              autoFocus
+                            />
+                            <button style={{ ...miniBtn, background: "#10B981" }} onClick={() => salvarSaldo(c.id)}>✓</button>
+                            <button style={{ ...miniBtn, background: "#374151" }} onClick={() => setEditandoSaldo(null)}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 800, color: saldoCor, fontSize: 14 }}>
+                              {saldoOk ? "✅ Zerado" : (c.saldo > 0 ? "+" : "") + fmt(c.saldo)}
+                            </span>
+                            <button
+                              style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 12, color: "#64748B" }}
+                              title="Editar saldo"
+                              onClick={() => { setEditandoSaldo(c.id); setNovoSaldo(String(c.saldo)); }}
+                            >✏️</button>
+                          </div>
+                        )}
+                        <div style={{ fontSize: 9, color: "#475569", marginTop: 2 }}>
+                          {saldoNeg ? "⚠️ Deve" : saldoPos ? "📈 A receber" : ""}
+                        </div>
+                      </div>
+                      <button style={{ ...miniBtn, background: "#2563EB" }} onClick={() => editar(c)}>✏️</button>
+                      <button style={{ ...miniBtn, background: "#DC2626" }} onClick={() => remover(c.id)}>🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {cadastros.length === 0 && (
+        <div style={{ ...card, textAlign: "center", color: "#475569", padding: "40px 0" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+          <div>Nenhum vendedor cadastrado ainda.</div>
+          <div style={{ fontSize: 12, color: "#334155", marginTop: 6 }}>Cadastre acima para selecionar rapidamente na entrada!</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
    ABA 6 — HISTÓRICO DE FECHAMENTOS
 ══════════════════════════════════════ */
 function HistoricoTab({ historico, setHistorico, formas, abrirFechamento }) {
@@ -1356,6 +1654,18 @@ function HistoricoTab({ historico, setHistorico, formas, abrirFechamento }) {
                     </span>
                     <button style={{ ...miniBtn, background: "#2563EB" }} onClick={() => abrirFechamento(f)}>👁️ Ver</button>
                     <button style={{ ...miniBtn, background: "#F97316" }} onClick={() => editarFechamento(f)}>✏️ Editar</button>
+                    <button style={{ ...miniBtn, background: "#7C3AED" }} onClick={() => {
+                      const dataAtual = new Date(f.timestamp).toISOString().split("T")[0];
+                      const novaData = prompt("📅 Digite a nova data (AAAA-MM-DD):\n\nData atual: " + dataAtual, dataAtual);
+                      if (!novaData) return;
+                      const novaDataObj = new Date(novaData + "T12:00:00");
+                      if (isNaN(novaDataObj.getTime())) return alert("Data inválida! Use o formato AAAA-MM-DD. Ex: 2026-04-20");
+                      setHistorico((prev) => prev.map((item) => item.id === f.id ? {
+                        ...item,
+                        timestamp: novaDataObj.toISOString(),
+                        dataFormatada: novaDataObj.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }),
+                      } : item));
+                    }}>📅 Data</button>
                     <button style={{ ...miniBtn, background: "#DC2626" }} onClick={() => removerFechamento(f.id)}>🗑️</button>
                   </div>
                 </div>
@@ -1412,6 +1722,21 @@ export default function App() {
   });
   const setHistorico = (v) => { const val = typeof v === "function" ? v(historico) : v; setHistoricoRaw(val); try { localStorage.setItem("caixafacil_historico", JSON.stringify(val)); } catch {} };
 
+  const [cadastros, setCadastrosRaw] = useState(() => {
+    try { const s = localStorage.getItem("caixafacil_cadastros"); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const setCadastros = (v) => { const val = typeof v === "function" ? v(cadastros) : v; setCadastrosRaw(val); try { localStorage.setItem("caixafacil_cadastros", JSON.stringify(val)); } catch {} };
+
+  // Atualiza saldo do vendedor cadastrado quando prestação é confirmada
+  const atualizarSaldoCadastro = (nomeVendedor, diferenca) => {
+    setCadastros((prev) => prev.map((c) => {
+      if (c.nome.trim().toLowerCase() === nomeVendedor.trim().toLowerCase()) {
+        return { ...c, saldo: (c.saldo || 0) + diferenca };
+      }
+      return c;
+    }));
+  };
+
   const totalGeral = vendedores.reduce((s, v) => s + v.total, 0);
 
   const limparTudo = () => {
@@ -1421,7 +1746,20 @@ export default function App() {
 
   const fecharDia = () => {
     if (vendedores.length === 0) return alert("Nenhum vendedor lançado.");
+
+    // Pede a data — padrão é hoje
+    const hoje = new Date().toISOString().split("T")[0];
+    const dataSelecionada = prompt(
+      "📅 Informe a data do fechamento (AAAA-MM-DD):\n\nExemplo: " + hoje,
+      hoje
+    );
+    if (!dataSelecionada) return; // cancelou
+
+    const dataObj = new Date(dataSelecionada + "T12:00:00");
+    if (isNaN(dataObj.getTime())) return alert("Data inválida! Use o formato AAAA-MM-DD. Ex: 2026-04-20");
+
     if (!confirm("Fechar o dia e salvar no histórico? Os vendedores atuais serão arquivados.")) return;
+
     const agora = new Date();
     const totalPorForma = {};
     const entreguePorForma = {};
@@ -1434,8 +1772,8 @@ export default function App() {
     const totalEntregue = comPrestacao.reduce((s, v) => s + v.prestacao.totalEntregue, 0);
     const fechamento = {
       id: Date.now(),
-      timestamp: agora.toISOString(),
-      dataFormatada: agora.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }),
+      timestamp: dataObj.toISOString(),
+      dataFormatada: dataObj.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }),
       horaFormatada: agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       vendedores: [...vendedores],
       totalEsperado,
@@ -1484,6 +1822,10 @@ export default function App() {
       </div>
 
       <div style={{ ...tabBar, overflowX: "auto" }}>
+        <button style={aba === "cadastros" ? tabActive : tabInactive} onClick={() => setAba("cadastros")}>
+          👥 Vendedores
+          {cadastros.length > 0 && <span style={{ marginLeft: 5, background: "#F97316", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 6px" }}>{cadastros.length}</span>}
+        </button>
         <button style={aba === "entrada" ? tabActive : tabInactive} onClick={() => setAba("entrada")}>📥 Entrada</button>
         <button style={aba === "contas" ? tabActive : tabInactive} onClick={() => setAba("contas")}>🧾 Prestação</button>
         <button style={aba === "resumo" ? tabActive : tabInactive} onClick={() => setAba("resumo")}>
@@ -1496,11 +1838,13 @@ export default function App() {
           {historico.length > 0 && <span style={{ marginLeft: 5, background: "#7C3AED", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 10, padding: "1px 6px" }}>{historico.length}</span>}
         </button>
         <button style={aba === "config" ? tabActive : tabInactive} onClick={() => setAba("config")}>⚙️ Config</button>
+        <button style={aba === "calculadora" ? tabActive : tabInactive} onClick={() => setAba("calculadora")}>🧮 Calculadora</button>
       </div>
 
       <div style={content}>
-        {aba === "entrada" && <EntradaTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} />}
-        {aba === "contas" && <PrestaContasTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} />}
+        {aba === "cadastros" && <CadastroVendedoresTab cadastros={cadastros} setCadastros={setCadastros} />}
+        {aba === "entrada" && <EntradaTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} cadastros={cadastros} />}
+        {aba === "contas" && <PrestaContasTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} atualizarSaldoCadastro={atualizarSaldoCadastro} />}
         {aba === "resumo" && <ResumoTab vendedores={vendedores} formas={formas} fecharDia={fecharDia} />}
         {aba === "impressao" && <ImpressaoTab vendedores={vendedores} formas={formas} />}
         {aba === "historico" && <HistoricoTab historico={historico} setHistorico={setHistorico} formas={formas}
@@ -1585,6 +1929,7 @@ export default function App() {
           />
         )}
         {aba === "config" && <ConfigTab formas={formas} setFormas={setFormas} />}
+        {aba === "calculadora" && <CalculadoraTab />}
       </div>
     </div>
   );
