@@ -520,7 +520,7 @@ function EntradaTab({ vendedores, setVendedores, formas, cadastros }) {
 /* ══════════════════════════════════════
    ABA 2 — PRESTAÇÃO DE CONTAS
 ══════════════════════════════════════ */
-function PrestaContasTab({ vendedores, setVendedores, formas, atualizarSaldoCadastro }) {
+function PrestaContasTab({ vendedores, setVendedores, formas }) {
   const [selectedId, setSelectedId] = useState("");
   const [entregue, setEntregue] = useState(initValores(formas));
   const [confirmado, setConfirmado] = useState(false);
@@ -555,10 +555,6 @@ function PrestaContasTab({ vendedores, setVendedores, formas, atualizarSaldoCada
     setVendedores((prev) =>
       prev.map((v) => v.id === Number(selectedId) ? { ...v, prestacao: resultado } : v)
     );
-    // Atualiza saldo do vendedor no cadastro
-    if (atualizarSaldoCadastro && vendedor) {
-      atualizarSaldoCadastro(vendedor.nome, difTotal);
-    }
     setConfirmado(true);
   };
 
@@ -1727,16 +1723,6 @@ export default function App() {
   });
   const setCadastros = (v) => { const val = typeof v === "function" ? v(cadastros) : v; setCadastrosRaw(val); try { localStorage.setItem("caixafacil_cadastros", JSON.stringify(val)); } catch {} };
 
-  // Atualiza saldo do vendedor cadastrado quando prestação é confirmada
-  const atualizarSaldoCadastro = (nomeVendedor, diferenca) => {
-    setCadastros((prev) => prev.map((c) => {
-      if (c.nome.trim().toLowerCase() === nomeVendedor.trim().toLowerCase()) {
-        return { ...c, saldo: (c.saldo || 0) + diferenca };
-      }
-      return c;
-    }));
-  };
-
   const totalGeral = vendedores.reduce((s, v) => s + v.total, 0);
 
   const limparTudo = () => {
@@ -1782,8 +1768,22 @@ export default function App() {
       entreguePorForma,
     };
     setHistorico((prev) => [fechamento, ...prev]);
+
+    // Atualiza saldo de cada vendedor cadastrado com base na diferença FINAL da prestação
+    vendedores.forEach((v) => {
+      if (v.prestacao) {
+        const diferenca = v.prestacao.diferenca || 0;
+        setCadastros((prev) => prev.map((c) => {
+          if (c.nome.trim().toLowerCase() === v.nome.trim().toLowerCase()) {
+            return { ...c, saldo: Math.round(((c.saldo || 0) + diferenca) * 100) / 100 };
+          }
+          return c;
+        }));
+      }
+    });
+
     setVendedores([]);
-    alert("✅ Dia fechado e salvo no histórico!");
+    alert("✅ Dia fechado! Saldos dos vendedores atualizados.");
     setAba("historico");
   };
 
@@ -1844,7 +1844,7 @@ export default function App() {
       <div style={content}>
         {aba === "cadastros" && <CadastroVendedoresTab cadastros={cadastros} setCadastros={setCadastros} />}
         {aba === "entrada" && <EntradaTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} cadastros={cadastros} />}
-        {aba === "contas" && <PrestaContasTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} atualizarSaldoCadastro={atualizarSaldoCadastro} />}
+        {aba === "contas" && <PrestaContasTab vendedores={vendedores} setVendedores={setVendedores} formas={formas} />}
         {aba === "resumo" && <ResumoTab vendedores={vendedores} formas={formas} fecharDia={fecharDia} />}
         {aba === "impressao" && <ImpressaoTab vendedores={vendedores} formas={formas} />}
         {aba === "historico" && <HistoricoTab historico={historico} setHistorico={setHistorico} formas={formas}
