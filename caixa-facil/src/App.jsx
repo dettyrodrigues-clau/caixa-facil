@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const PAYMENT_TYPES_PADRAO = [
   { key: "deposito",   label: "Depósito",       icon: "🏦", color: "#3B82F6" },
@@ -161,6 +161,126 @@ function CalculadoraTab() {
           <div style={{ textAlign: "center", borderTop: "1px solid #10B98133", paddingTop: 14 }}>
             <div style={{ fontSize: 12, color: "#94A3B8", marginBottom: 4 }}>💰 TOTAL GERAL</div>
             <div style={{ fontSize: 36, fontWeight: 900, color: "#10B981" }}>{fmt(total)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   ABA BACKUP
+══════════════════════════════════════ */
+function BackupTab({ dados, onImportar }) {
+  const fileRef = useRef();
+
+  const exportar = () => {
+    const agora = new Date();
+    const nomeArquivo = `caixafacil_backup_${agora.toLocaleDateString("pt-BR").replace(/\//g, "-")}_${agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }).replace(":", "h")}.json`;
+    const json = JSON.stringify({ ...dados, versao: "1.0", exportadoEm: agora.toISOString() }, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nomeArquivo;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importar = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.vendedores && !parsed.historico && !parsed.cadastros) {
+          return alert("❌ Arquivo inválido! Certifique-se de usar um backup do CaixaFácil.");
+        }
+        if (confirm(`Importar backup de ${parsed.exportadoEm ? new Date(parsed.exportadoEm).toLocaleString("pt-BR") : "data desconhecida"}?\n\nIsso vai substituir todos os dados atuais!`)) {
+          onImportar(parsed);
+        }
+      } catch {
+        alert("❌ Erro ao ler o arquivo. Verifique se é um backup válido do CaixaFácil.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const totalDados = {
+    vendedores: dados.vendedores?.length || 0,
+    historico: dados.historico?.length || 0,
+    cadastros: dados.cadastros?.length || 0,
+    formas: dados.formas?.length || 0,
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={card}>
+        <h2 style={cardTitle}>💾 Backup dos Dados</h2>
+        <div style={{ fontSize: 13, color: "#64748B", marginBottom: 24 }}>
+          Salve um arquivo de backup no seu computador para não perder seus dados. Você pode restaurar a qualquer momento.
+        </div>
+
+        {/* Resumo dos dados atuais */}
+        <div style={{ background: "#0D1527", border: "1px solid #1E293B", borderRadius: 12, padding: 16, marginBottom: 24 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
+            📊 Dados atuais no sistema
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10 }}>
+            {[
+              { label: "👥 Vendedores cadastrados", valor: totalDados.cadastros, cor: "#10B981" },
+              { label: "📥 Entradas do dia", valor: totalDados.vendedores, cor: "#3B82F6" },
+              { label: "📅 Fechamentos", valor: totalDados.historico, cor: "#7C3AED" },
+              { label: "💳 Formas de pagamento", valor: totalDados.formas, cor: "#F97316" },
+            ].map((item) => (
+              <div key={item.label} style={{ background: "#1E293B", borderRadius: 10, padding: "12px 14px", textAlign: "center", border: `1px solid ${item.cor}33` }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: item.cor }}>{item.valor}</div>
+                <div style={{ fontSize: 10, color: "#64748B", marginTop: 3 }}>{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Exportar */}
+        <div style={{ background: "linear-gradient(135deg,#052e1630,#10B98120)", border: "2px solid #10B98155", borderRadius: 14, padding: "20px 24px", marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, color: "#10B981", fontSize: 15, marginBottom: 6 }}>📤 Exportar Backup</div>
+          <div style={{ color: "#64748B", fontSize: 12, marginBottom: 14 }}>
+            Salva um arquivo <strong>.json</strong> no seu computador com todos os dados: vendedores, histórico, cadastros e configurações.
+          </div>
+          <button style={{ ...btn, background: "#10B981", fontSize: 14, padding: "12px 24px", width: "100%" }} onClick={exportar}>
+            💾 Baixar Backup Agora
+          </button>
+        </div>
+
+        {/* Importar */}
+        <div style={{ background: "linear-gradient(135deg,#1e3a5f30,#3B82F620)", border: "2px solid #3B82F655", borderRadius: 14, padding: "20px 24px", marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, color: "#3B82F6", fontSize: 15, marginBottom: 6 }}>📥 Restaurar Backup</div>
+          <div style={{ color: "#64748B", fontSize: 12, marginBottom: 14 }}>
+            ⚠️ Isso vai <strong>substituir todos os dados atuais</strong> pelo conteúdo do arquivo de backup. Use somente para recuperar dados perdidos.
+          </div>
+          <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={importar} />
+          <button style={{ ...btn, background: "#3B82F6", fontSize: 14, padding: "12px 24px", width: "100%" }} onClick={() => fileRef.current.click()}>
+            📂 Selecionar Arquivo de Backup
+          </button>
+        </div>
+
+        {/* Dicas */}
+        <div style={{ background: "#1E293B", borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#F59E0B", marginBottom: 10 }}>💡 Dicas de backup</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {[
+              "Faça backup todo dia antes de fechar o sistema",
+              "Salve em pasta segura: Documentos ou Google Drive",
+              "Se trocar de computador, importe o backup no novo",
+              "O arquivo tem o nome com a data e hora do backup",
+              "Guarde vários backups de datas diferentes",
+            ].map((dica, i) => (
+              <div key={i} style={{ fontSize: 12, color: "#94A3B8", display: "flex", gap: 8 }}>
+                <span style={{ color: "#F59E0B" }}>•</span> {dica}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1538,7 +1658,7 @@ function CadastroVendedoresTab({ cadastros, setCadastros }) {
 /* ══════════════════════════════════════
    ABA 6 — HISTÓRICO DE FECHAMENTOS
 ══════════════════════════════════════ */
-function HistoricoTab({ historico, setHistorico, formas, abrirFechamento }) {
+function HistoricoTab({ historico, setHistorico, formas, abrirFechamento, editarFechamento }) {
   const [filtro, setFiltro] = useState("todos");
   const [mesSel, setMesSel] = useState("");
 
@@ -1769,10 +1889,10 @@ export default function App() {
     };
     setHistorico((prev) => [fechamento, ...prev]);
 
-    // Atualiza saldo de cada vendedor cadastrado com base na diferença FINAL da prestação
+    // Atualiza saldo: FALTOU desconta, SOBROU vira crédito (acumula).
     vendedores.forEach((v) => {
-      if (v.prestacao) {
-        const diferenca = v.prestacao.diferenca || 0;
+      if (v.prestacao && (v.prestacao.status === "faltou" || v.prestacao.status === "sobrou")) {
+        const diferenca = v.prestacao.diferenca || 0; // negativo quando faltou, positivo quando sobrou
         setCadastros((prev) => prev.map((c) => {
           if (c.nome.trim().toLowerCase() === v.nome.trim().toLowerCase()) {
             return { ...c, saldo: Math.round(((c.saldo || 0) + diferenca) * 100) / 100 };
@@ -1780,10 +1900,11 @@ export default function App() {
           return c;
         }));
       }
+      // Se OK: saldo não muda (diferença = 0)
     });
 
     setVendedores([]);
-    alert("✅ Dia fechado! Saldos dos vendedores atualizados.");
+    alert("✅ Dia fechado! Saldos atualizados (faltou desconta, sobrou vira crédito).");
     setAba("historico");
   };
 
@@ -1839,6 +1960,7 @@ export default function App() {
         </button>
         <button style={aba === "config" ? tabActive : tabInactive} onClick={() => setAba("config")}>⚙️ Config</button>
         <button style={aba === "calculadora" ? tabActive : tabInactive} onClick={() => setAba("calculadora")}>🧮 Calculadora</button>
+        <button style={aba === "backup" ? tabActive : tabInactive} onClick={() => setAba("backup")}>💾 Backup</button>
       </div>
 
       <div style={content}>
@@ -1930,6 +2052,19 @@ export default function App() {
         )}
         {aba === "config" && <ConfigTab formas={formas} setFormas={setFormas} />}
         {aba === "calculadora" && <CalculadoraTab />}
+        {aba === "backup" && (
+          <BackupTab
+            dados={{ vendedores, historico, cadastros, formas }}
+            onImportar={(dados) => {
+              if (dados.vendedores) setVendedores(dados.vendedores);
+              if (dados.historico) setHistorico(dados.historico);
+              if (dados.cadastros) setCadastros(dados.cadastros);
+              if (dados.formas) setFormas(dados.formas);
+              alert("✅ Backup importado com sucesso!");
+              setAba("entrada");
+            }}
+          />
+        )}
       </div>
     </div>
   );
